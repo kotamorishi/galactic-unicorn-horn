@@ -5,7 +5,7 @@ Raspberry Pi等のデバイスから電光掲示板デバイス [Galactic Unicor
 ## 技術スタック
 
 - **言語:** Python 3
-- **主要ライブラリ:** icalendar, requests, python-dotenv
+- **主要ライブラリ:** icalendar, requests, python-dotenv, Pillow
 - **対象デバイス:** Raspberry Pi（Galactic Unicorn Leg へHTTPリクエストを送信）
 - **カレンダー連携:** iCal URL方式（Google カレンダー・Apple iCal 両対応）
 
@@ -14,8 +14,10 @@ Raspberry Pi等のデバイスから電光掲示板デバイス [Galactic Unicor
 ```
 main.py            # メインループ（定期的にカレンダー取得→LED表示）
 config.py          # .envからの設定読み込み
+renderer.py        # テキスト→ビットマップ変換（Pillow）
 .env.example       # 環境変数のテンプレート
 requirements.txt   # Pythonパッケージ依存
+tests/             # pytest テスト
 ```
 
 ## セットアップ
@@ -33,11 +35,18 @@ python main.py
 
 ## Galactic Unicorn Leg API
 
+- `POST /api/bitmap` — ビットマップ表示（本プロジェクトで使用。monoフォーマット、base64エンコード、最大幅5000px）
+- `DELETE /api/bitmap` — ビットマップクリア（テキストモードに戻る）
 - `POST /api/message` — テキスト表示（text, display_mode, scroll_speed, color, font等）
 - `GET /api/status` — デバイス状態取得
 - `POST /api/schedules` — スケジュール設定
-- テキスト上限: 128文字
 - 同時接続: 1-2本まで、1リクエスト/秒以下を推奨
+
+## テスト
+
+```bash
+python3 -m pytest tests/ -v
+```
 
 ## 開発ガイドライン
 

@@ -6,6 +6,7 @@ import requests
 from icalendar import Calendar
 
 from config import get_config
+from renderer import render_text_to_bitmap_payload
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,20 +84,18 @@ def format_events_text(events):
 
 
 def send_to_display(device_ip, text, config):
-    """Galactic Unicorn LegのAPIにテキストを送信する"""
-    # 128文字制限
-    display_text = text[:128]
-    payload = {
-        "text": display_text,
-        "display_mode": "scroll",
-        "scroll_speed": config["scroll_speed"],
-        "font": config["font"],
-        "color": {"r": 0, "g": 255, "b": 128},
-    }
-    url = f"http://{device_ip}/api/message"
+    """ビットマップモードでテキストをLEDに送信する"""
+    payload = render_text_to_bitmap_payload(
+        text,
+        color={"r": 0, "g": 255, "b": 128},
+        scroll_speed=config["scroll_speed"],
+        font_path=config.get("font_path"),
+        font_size=config.get("font_size", 11),
+    )
+    url = f"http://{device_ip}/api/bitmap"
     resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
-    logger.info("表示更新: %s", display_text)
+    logger.info("ビットマップ表示更新: %s", text[:50])
 
 
 def main():
