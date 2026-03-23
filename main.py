@@ -1,0 +1,124 @@
+import time
+import logging
+from datetime import datetime, timedelta
+
+import requests
+from icalendar import Calendar
+
+from config import get_config
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def fetch_events(ical_url):
+    """iCal URLからイベントを取得し、今日と明日のイベントを返す"""
+    resp = requests.get(ical_url, timeout=30)
+    resp.raise_for_status()
+    cal = Calendar.from_ical(resp.text)
+
+    now = datetime.now()
+    tomorrow_end = (now + timedelta(days=1)).replace(hour=23, minute=59, second=59)
+    events = []
+
+    for component in cal.walk("VEVENT"):
+        dtstart = component.get("dtstart")
+        if dtstart is None:
+            continue
+        dt = dtstart.dt
+
+        # 終日イベントはdateオブジェクト、時刻付きはdatetimeオブジェクト
+        if isinstance(dt, datetime):
+            event_date = dt.replace(tzinfo=None)
+        else:
+            event_date = datetime.combine(dt, datetime.min.time())
+
+        if now.date() <= event_date.date() <= tomorrow_end.date():
+            summary = str(component.get("summary", ""))
+            events.append({"start": event_date, "summary": summary})
+
+    return sorted(events, key=lambda e: e["start"])
+
+
+def fetch_all_events(ical_urls):
+    """複数のiCal URLからイベントを取得して統合する"""
+    all_events = []
+    for url in ical_urls:
+        try:
+            events = fetch_events(url)
+            all_events.extend(events)
+            logger.info("%d件のイベントを取得: %s", len(events), url[:50])
+        except Exception:
+            logger.exception("カレンダー取得エラー: %s", url[:50])
+    return sorted(all_events, key=lambda e: e["start"])
+
+
+def format_events_text(events):
+    """イベントリストを表示用テキストに変換する"""
+    if not events:
+        return "予定なし"
+
+    now = datetime.now()
+    lines = []
+    for event in events:
+        dt = event["start"]
+        if dt.date() == now.date():
+            time_str = dt.strftime("%H:%M")
+        else:
+            time_str = "明日 " + dt.strftime("%H:%M")
+
+        # 終日イベント（00:00）は時刻を省略
+        if dt.hour == 0 and dt.minute == 0:
+            if dt.date() == now.date():
+                time_str = "終日"
+            else:
+                time_str = "明日"
+
+        lines.append(f"{time_str} {event['summary']}")
+
+    return " | ".join(lines)
+
+
+def send_to_display(device_ip, text, config):
+    """Galactic Unicorn LegのAPIにテキストを送信する"""
+    # 128文字制限
+    display_text = text[:128]
+    payload = {
+        "text": display_text,
+        "display_mode": "scroll",
+        "scroll_speed": config["scroll_speed"],
+        "font": config["font"],
+        "color": {"r": 0, "g": 255, "b": 128},
+    }
+    url = f"http://{device_ip}/api/message"
+    resp = requests.post(url, json=payload, timeout=10)
+    resp.raise_for_status()
+    logger.info("表示更新: %s", display_text)
+
+
+def main():
+    config = get_config()
+
+    if not config["ical_urls"]:
+        logger.error("ICAL_URLSが設定されていません。.envファイルを確認してください。")
+        return
+
+    logger.info("開始 - デバイス: %s, カレンダー: %d件", config["device_ip"], len(config["ical_urls"]))
+    logger.info("取得間隔: %d秒", config["fetch_interval"])
+
+    while True:
+        try:
+            events = fetch_all_events(config["ical_urls"])
+            text = format_events_text(events)
+            send_to_display(config["device_ip"], text, config)
+        except Exception:
+            logger.exception("メインループでエラーが発生")
+
+        time.sleep(config["fetch_interval"])
+
+
+if __name__ == "__main__":
+    main()
