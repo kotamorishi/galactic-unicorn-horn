@@ -1,97 +1,97 @@
 # Galactic Unicorn Horn
 
-Raspberry Pi等のデバイスから電光掲示板デバイス [Galactic Unicorn Leg](https://github.com/kotamorishi/galactic-unicorn-leg) のAPIを呼び出し、カレンダーの予定をLEDディスプレイにスクロール表示するプロジェクトです。
+Fetches calendar events from Apple Calendar and Google Calendar, then displays them on an LED matrix display ([Galactic Unicorn Leg](https://github.com/kotamorishi/galactic-unicorn-leg)) via Raspberry Pi.
 
-## 対応カレンダー
+## Supported Calendars
 
-- **Apple カレンダー（iCloud）** — CalDAV認証方式。カレンダーを公開設定にする必要なし
-- **Google カレンダー** — iCal URL方式。秘密のアドレスを使用
+- **Apple Calendar (iCloud)** — CalDAV authentication. No need to make your calendar public
+- **Google Calendar** — iCal URL. Uses the secret address
 
-両方を同時に使用することもできます。
+Both can be used simultaneously.
 
-## セットアップ
+## Setup
 
-### 1. 依存パッケージのインストール
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. フォントの配置
+### 2. Install Fonts
 
-`fonts/` ディレクトリに [PixelMplus12](https://github.com/itouhiro/PixelMplus) をダウンロードして配置してください。
+Download [PixelMplus12](https://github.com/itouhiro/PixelMplus) and place it in the `fonts/` directory.
 
 ```
 fonts/
   PixelMplus12-Regular.ttf
-  PixelMplus12-Bold.ttf   (任意)
+  PixelMplus12-Bold.ttf   (optional)
 ```
 
-> PixelMplus12はフリーフォントです。ライセンスの都合上リポジトリには含めていません。
+> PixelMplus12 is a free font. It is not included in this repository due to licensing.
 
-### 3. 環境変数の設定
+### 3. Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` を編集して、デバイスIPとカレンダーの設定を行います。
+Edit `.env` to set the device IP and calendar credentials.
 
-### 4. 実行
+### 4. Run
 
 ```bash
 python main.py
 ```
 
-## カレンダーの設定方法
+## Calendar Configuration
 
-### Apple カレンダー（iCloud）
+### Apple Calendar (iCloud)
 
-Apple カレンダーはCalDAV認証方式で接続します。カレンダーを「公開」にする必要はありません。
+Apple Calendar connects via CalDAV authentication. You do **not** need to make your calendar public.
 
-#### 手順
+#### Steps
 
-1. [appleid.apple.com](https://appleid.apple.com/) にログイン
-2. **サインインとセキュリティ** → **アプリ用パスワード** を選択
-3. **「+」** ボタンでパスワードを生成（名前は自由。例：「LED掲示板」）
-4. 表示される `xxxx-xxxx-xxxx-xxxx` 形式のパスワードをコピー
-5. `.env` に以下を設定:
+1. Sign in to [appleid.apple.com](https://appleid.apple.com/)
+2. Go to **Sign-In and Security** → **App-Specific Passwords**
+3. Click **"+"** to generate a password (name it anything, e.g. "LED Display")
+4. Copy the generated password in `xxxx-xxxx-xxxx-xxxx` format
+5. Set the following in `.env`:
 
 ```
 ICLOUD_USERNAME=your@icloud.com
 ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 ```
 
-これだけでiCloud上の全カレンダーからイベントが取得されます。
+This will fetch events from all your iCloud calendars.
 
-> `ICAL_URLS` の設定は不要です。
+> You do not need to set `ICAL_URLS` for Apple Calendar.
 
-### Google カレンダー
+### Google Calendar
 
-Google カレンダーはiCal URL方式で接続します。
+Google Calendar connects via iCal URL.
 
-#### 手順
+#### Steps
 
-1. [Google カレンダー](https://calendar.google.com/) を開く
-2. 左サイドバーの対象カレンダーの **「⋮」** → **「設定と共有」**
-3. **「iCal形式の秘密のアドレス」** のURLをコピー
-4. `.env` に以下を設定:
+1. Open [Google Calendar](https://calendar.google.com/)
+2. Click **"⋮"** next to the target calendar → **"Settings and sharing"**
+3. Copy the URL under **"Secret address in iCal format"**
+4. Set the following in `.env`:
 
 ```
 ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 ```
 
-複数のカレンダーを使う場合はカンマ区切りで指定できます:
+For multiple calendars, separate URLs with commas:
 
 ```
 ICAL_URLS=https://calendar.google.com/.../1.ics,https://calendar.google.com/.../2.ics
 ```
 
-> このURLは推測不可能なランダム文字列を含んでおり、URLを知っている人だけがアクセスできます。カレンダーを「公開」にする必要はありません。
+> This URL contains a random string that is impossible to guess. Only those who know the URL can access it. You do not need to make the calendar public.
 
-### Apple + Google の併用
+### Using Both Apple + Google
 
-両方を設定すれば、全てのイベントが時刻順に統合されて表示されます。
+Set both and all events will be merged and displayed in chronological order.
 
 ```
 ICLOUD_USERNAME=your@icloud.com
@@ -99,26 +99,26 @@ ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 ```
 
-## 設定一覧
+## Configuration Reference
 
-| 環境変数 | 説明 | デフォルト |
-|---------|------|-----------|
-| `DEVICE_IP` | Galactic Unicorn LegのIPアドレス | `192.168.1.100` |
-| `ICLOUD_USERNAME` | Apple ID（メールアドレス） | ー |
-| `ICLOUD_APP_PASSWORD` | iCloudアプリ用パスワード | ー |
-| `ICAL_URLS` | iCal URL（カンマ区切りで複数可） | ー |
-| `FETCH_INTERVAL` | カレンダー取得間隔（秒） | `300` |
-| `SCROLL_SPEED` | スクロール速度（`slow` / `medium` / `fast`） | `medium` |
-| `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus12-Regular.ttf` |
-| `FONT_SIZE` | フォントサイズ（px） | `12` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DEVICE_IP` | IP address of Galactic Unicorn Leg | `192.168.1.100` |
+| `ICLOUD_USERNAME` | Apple ID (email address) | — |
+| `ICLOUD_APP_PASSWORD` | iCloud app-specific password | — |
+| `ICAL_URLS` | iCal URLs (comma-separated for multiple) | — |
+| `FETCH_INTERVAL` | Calendar fetch interval in seconds | `300` |
+| `SCROLL_SPEED` | Scroll speed (`slow` / `medium` / `fast`) | `medium` |
+| `FONT_PATH` | Path to font file | `fonts/PixelMplus12-Regular.ttf` |
+| `FONT_SIZE` | Font size in pixels | `12` |
 
-## セキュリティについて
+## Security
 
-- `.env` ファイルは `.gitignore` に含まれており、Gitにコミットされません
-- iCloudアプリ用パスワードが漏洩した場合は [appleid.apple.com](https://appleid.apple.com/) から無効化できます
-- Google カレンダーの秘密のアドレスが漏洩した場合はGoogle カレンダーの設定からリセットできます
+- `.env` is included in `.gitignore` and will not be committed to Git
+- If your iCloud app-specific password is compromised, revoke it at [appleid.apple.com](https://appleid.apple.com/)
+- If your Google Calendar secret address is compromised, reset it from Google Calendar settings
 
-## テスト
+## Testing
 
 ```bash
 python3 -m pytest tests/ -v
