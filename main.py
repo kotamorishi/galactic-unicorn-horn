@@ -6,6 +6,7 @@ import requests
 from icalendar import Calendar
 
 from config import get_config
+from icloud_calendar import fetch_icloud_events
 from renderer import render_text_to_bitmap_payload
 
 logging.basicConfig(
@@ -98,19 +99,50 @@ def send_to_display(device_ip, text, config):
     logger.info("ビットマップ表示更新: %s", text[:50])
 
 
+def fetch_all_calendar_events(config):
+    """全ソース（iCal URL + iCloud CalDAV）からイベントを取得して統合する"""
+    all_events = []
+
+    # iCal URL方式（Google カレンダー等）
+    if config["ical_urls"]:
+        all_events.extend(fetch_all_events(config["ical_urls"]))
+
+    # iCloud CalDAV方式（Apple カレンダー）
+    if config["icloud_username"] and config["icloud_app_password"]:
+        try:
+            icloud_events = fetch_icloud_events(
+                config["icloud_username"],
+                config["icloud_app_password"],
+            )
+            all_events.extend(icloud_events)
+            logger.info("iCloud: %d件のイベントを取得", len(icloud_events))
+        except Exception:
+            logger.exception("iCloudカレンダー取得エラー")
+
+    return sorted(all_events, key=lambda e: e["start"])
+
+
 def main():
     config = get_config()
 
-    if not config["ical_urls"]:
-        logger.error("ICAL_URLSが設定されていません。.envファイルを確認してください。")
+    has_ical = bool(config["ical_urls"])
+    has_icloud = bool(config["icloud_username"] and config["icloud_app_password"])
+
+    if not has_ical and not has_icloud:
+        logger.error("カレンダーが設定されていません。.envファイルを確認してください。")
         return
 
-    logger.info("開始 - デバイス: %s, カレンダー: %d件", config["device_ip"], len(config["ical_urls"]))
+    sources = []
+    if has_ical:
+        sources.append(f"iCal URL {len(config['ical_urls'])}件")
+    if has_icloud:
+        sources.append("iCloud CalDAV")
+    logger.info("開始 - デバイス: %s, ソース: %s", config["device_ip"], ", ".join(sources))
     logger.info("取得間隔: %d秒", config["fetch_interval"])
 
     while True:
         try:
-            events = fetch_all_events(config["ical_urls"])
+            events = fetch_all_calendar_events(config)
             text = format_events_text(events)
             send_to_display(config["device_ip"], text, config)
         except Exception:

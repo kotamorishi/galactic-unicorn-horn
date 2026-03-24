@@ -15,6 +15,27 @@ class TestGetConfig:
         assert config["scroll_speed"] == "medium"
         assert config["font_path"] is None
         assert config["font_size"] == 12
+        assert config["icloud_username"] is None
+        assert config["icloud_app_password"] is None
+
+    def test_icloud_credentials(self):
+        """iCloud認証情報の読み込み"""
+        env = {
+            "ICLOUD_USERNAME": "user@icloud.com",
+            "ICLOUD_APP_PASSWORD": "xxxx-xxxx-xxxx-xxxx",
+        }
+        with mock.patch.dict(os.environ, env, clear=True):
+            config = get_config()
+        assert config["icloud_username"] == "user@icloud.com"
+        assert config["icloud_app_password"] == "xxxx-xxxx-xxxx-xxxx"
+
+    def test_icloud_empty_credentials(self):
+        """iCloud認証情報が空の場合はNone"""
+        env = {"ICLOUD_USERNAME": "", "ICLOUD_APP_PASSWORD": ""}
+        with mock.patch.dict(os.environ, env, clear=True):
+            config = get_config()
+        assert config["icloud_username"] is None
+        assert config["icloud_app_password"] is None
 
     def test_single_ical_url(self):
         """iCal URLが1つの場合"""
