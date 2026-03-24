@@ -1,3 +1,6 @@
+# Fonts (ライセンス上リポジトリに含めない)
+fonts/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
