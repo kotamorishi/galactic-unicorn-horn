@@ -218,7 +218,7 @@ def main():
                 # Play sound once per event
                 if event_key not in notified_events:
                     try:
-                        play_sound(config["device_ip"])
+                        play_sound(config["device_ip"], preset_id=5, volume=70)
                     except Exception:
                         logger.exception("Failed to play sound")
                     notified_events.add(event_key)
