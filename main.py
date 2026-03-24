@@ -129,6 +129,20 @@ def get_event_phase(event, now):
         return "off"
 
 
+def check_device(device_ip):
+    """Check if the LED device is reachable via GET /api/status."""
+    try:
+        url = f"http://{device_ip}/api/status"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        logger.info("Device online - time: %s %s", data.get("day", ""), data.get("time", ""))
+        return True
+    except Exception:
+        logger.warning("Device unreachable at %s", device_ip)
+        return False
+
+
 def send_bitmap(device_ip, text, color, config):
     """Send bitmap text to LED display."""
     payload = render_text_to_bitmap_payload(
@@ -185,6 +199,8 @@ def main():
     notified_events_5min = set()  # Track events where 5-min sound has been played
     current_display = None  # Track what's currently displayed
 
+    device_available = False
+
     while True:
         try:
             now = datetime.now()
@@ -194,6 +210,12 @@ def main():
                 events = fetch_all_calendar_events(config)
                 last_fetch = now
                 logger.info("Fetched %d events total", len(events))
+                # Check device connectivity at each fetch cycle
+                device_available = check_device(config["device_ip"])
+
+            if not device_available:
+                time.sleep(10)
+                continue
 
             # Find the highest priority event to display
             display_event = None
