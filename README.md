@@ -1,0 +1,125 @@
+# Galactic Unicorn Horn
+
+Raspberry Pi等のデバイスから電光掲示板デバイス [Galactic Unicorn Leg](https://github.com/kotamorishi/galactic-unicorn-leg) のAPIを呼び出し、カレンダーの予定をLEDディスプレイにスクロール表示するプロジェクトです。
+
+## 対応カレンダー
+
+- **Apple カレンダー（iCloud）** — CalDAV認証方式。カレンダーを公開設定にする必要なし
+- **Google カレンダー** — iCal URL方式。秘密のアドレスを使用
+
+両方を同時に使用することもできます。
+
+## セットアップ
+
+### 1. 依存パッケージのインストール
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. フォントの配置
+
+`fonts/` ディレクトリに [PixelMplus12](https://github.com/itouhiro/PixelMplus) をダウンロードして配置してください。
+
+```
+fonts/
+  PixelMplus12-Regular.ttf
+  PixelMplus12-Bold.ttf   (任意)
+```
+
+> PixelMplus12はフリーフォントです。ライセンスの都合上リポジトリには含めていません。
+
+### 3. 環境変数の設定
+
+```bash
+cp .env.example .env
+```
+
+`.env` を編集して、デバイスIPとカレンダーの設定を行います。
+
+### 4. 実行
+
+```bash
+python main.py
+```
+
+## カレンダーの設定方法
+
+### Apple カレンダー（iCloud）
+
+Apple カレンダーはCalDAV認証方式で接続します。カレンダーを「公開」にする必要はありません。
+
+#### 手順
+
+1. [appleid.apple.com](https://appleid.apple.com/) にログイン
+2. **サインインとセキュリティ** → **アプリ用パスワード** を選択
+3. **「+」** ボタンでパスワードを生成（名前は自由。例：「LED掲示板」）
+4. 表示される `xxxx-xxxx-xxxx-xxxx` 形式のパスワードをコピー
+5. `.env` に以下を設定:
+
+```
+ICLOUD_USERNAME=your@icloud.com
+ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+
+これだけでiCloud上の全カレンダーからイベントが取得されます。
+
+> `ICAL_URLS` の設定は不要です。
+
+### Google カレンダー
+
+Google カレンダーはiCal URL方式で接続します。
+
+#### 手順
+
+1. [Google カレンダー](https://calendar.google.com/) を開く
+2. 左サイドバーの対象カレンダーの **「⋮」** → **「設定と共有」**
+3. **「iCal形式の秘密のアドレス」** のURLをコピー
+4. `.env` に以下を設定:
+
+```
+ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
+```
+
+複数のカレンダーを使う場合はカンマ区切りで指定できます:
+
+```
+ICAL_URLS=https://calendar.google.com/.../1.ics,https://calendar.google.com/.../2.ics
+```
+
+> このURLは推測不可能なランダム文字列を含んでおり、URLを知っている人だけがアクセスできます。カレンダーを「公開」にする必要はありません。
+
+### Apple + Google の併用
+
+両方を設定すれば、全てのイベントが時刻順に統合されて表示されます。
+
+```
+ICLOUD_USERNAME=your@icloud.com
+ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
+```
+
+## 設定一覧
+
+| 環境変数 | 説明 | デフォルト |
+|---------|------|-----------|
+| `DEVICE_IP` | Galactic Unicorn LegのIPアドレス | `192.168.1.100` |
+| `ICLOUD_USERNAME` | Apple ID（メールアドレス） | ー |
+| `ICLOUD_APP_PASSWORD` | iCloudアプリ用パスワード | ー |
+| `ICAL_URLS` | iCal URL（カンマ区切りで複数可） | ー |
+| `FETCH_INTERVAL` | カレンダー取得間隔（秒） | `300` |
+| `SCROLL_SPEED` | スクロール速度（`slow` / `medium` / `fast`） | `medium` |
+| `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus12-Regular.ttf` |
+| `FONT_SIZE` | フォントサイズ（px） | `12` |
+
+## セキュリティについて
+
+- `.env` ファイルは `.gitignore` に含まれており、Gitにコミットされません
+- iCloudアプリ用パスワードが漏洩した場合は [appleid.apple.com](https://appleid.apple.com/) から無効化できます
+- Google カレンダーの秘密のアドレスが漏洩した場合はGoogle カレンダーの設定からリセットできます
+
+## テスト
+
+```bash
+python3 -m pytest tests/ -v
+```
