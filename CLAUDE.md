@@ -37,10 +37,12 @@ python main.py
 
 - `POST /api/bitmap` — ビットマップ表示（本プロジェクトで使用。monoフォーマット、base64エンコード、最大幅5000px）
 - `DELETE /api/bitmap` — ビットマップクリア（テキストモードに戻る）
-- `POST /api/message` — テキスト表示（text, display_mode, scroll_speed, color, font等）
+- `POST /api/message` — テキスト表示（英数字・記号のみ対応。日本語不可）
 - `GET /api/status` — デバイス状態取得
 - `POST /api/schedules` — スケジュール設定
 - 同時接続: 1-2本まで、1リクエスト/秒以下を推奨
+
+**重要:** テキストAPI (`POST /api/message`) は英数字・記号のみ対応。日本語表示にはビットマップAPI (`POST /api/bitmap`) を使うこと。本プロジェクトではカレンダーの予定に日本語が含まれるため、常にビットマップAPIを使用する。
 
 ## テスト
 
