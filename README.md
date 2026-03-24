@@ -99,6 +99,23 @@ ICLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 ```
 
+## How Display Timing Works
+
+Events are displayed based on their start time. For example, a `09:00-10:00 ABC` event:
+
+| Time | Action | Color |
+|------|--------|-------|
+| 08:49 | Display off | — |
+| 08:50 | Notification sound plays, shows `09:00-10:00 ABC` | Green |
+| 09:00 | Color changes to red (event started) | Red |
+| 09:05 | Display cleared | — |
+
+- **10 min before start**: Display turns on (green) + notification sound
+- **At start time**: Color changes to red
+- **5 min after start**: Display is cleared
+- Active events (red) take priority over upcoming events (green) if overlapping
+- Sound plays only once per event
+
 ## Configuration Reference
 
 | Variable | Description | Default |
