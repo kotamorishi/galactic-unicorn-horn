@@ -14,7 +14,7 @@ class TestGetConfig:
         assert config["fetch_interval"] == 300
         assert config["scroll_speed"] == "medium"
         assert config["font_path"] is None
-        assert config["font_size"] == 11
+        assert config["font_size"] == 12
 
     def test_single_ical_url(self):
         """iCal URLが1つの場合"""
