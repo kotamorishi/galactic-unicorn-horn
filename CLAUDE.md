@@ -5,16 +5,19 @@ Raspberry Pi等のデバイスから電光掲示板デバイス [Galactic Unicor
 ## 技術スタック
 
 - **言語:** Python 3
-- **主要ライブラリ:** icalendar, requests, python-dotenv, Pillow
+- **主要ライブラリ:** icalendar, requests, python-dotenv, Pillow, caldav
 - **対象デバイス:** Raspberry Pi（Galactic Unicorn Leg へHTTPリクエストを送信）
-- **カレンダー連携:** iCal URL方式（Google カレンダー・Apple iCal 両対応）
+- **カレンダー連携:**
+  - Google カレンダー: iCal URL方式（秘密のアドレス、認証不要）
+  - Apple カレンダー: CalDAV認証方式（アプリ用パスワード、公開設定不要）
 
 ## プロジェクト構成
 
 ```
 main.py            # メインループ（定期的にカレンダー取得→LED表示）
 config.py          # .envからの設定読み込み
-renderer.py        # テキスト→ビットマップ変換（Pillow）
+renderer.py        # テキスト→ビットマップ変換（Pillow, PixelMplus12）
+icloud_calendar.py # Apple CalDAV認証でプライベートカレンダー取得
 .env.example       # 環境変数のテンプレート
 requirements.txt   # Pythonパッケージ依存
 tests/             # pytest テスト
