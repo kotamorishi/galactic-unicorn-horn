@@ -181,7 +181,8 @@ def main():
 
     events = []
     last_fetch = None
-    notified_events = set()  # Track events where sound has been played
+    notified_events_10min = set()  # Track events where 10-min sound has been played
+    notified_events_5min = set()  # Track events where 5-min sound has been played
     current_display = None  # Track what's currently displayed
 
     while True:
@@ -215,14 +216,24 @@ def main():
                 event_key = (display_event["start"], display_event["summary"])
                 text = format_event_text(display_event)
 
-                # Play sound once per event
-                if event_key not in notified_events:
+                # Play sound at 10 min before
+                if event_key not in notified_events_10min:
                     try:
                         play_sound(config["device_ip"], preset_id=5, volume=70)
                     except Exception:
                         logger.exception("Failed to play sound")
-                    notified_events.add(event_key)
+                    notified_events_10min.add(event_key)
                     time.sleep(1)  # Wait before sending bitmap
+
+                # Play sound again at 5 min before
+                five_min_before = display_event["start"] - timedelta(minutes=5)
+                if now >= five_min_before and event_key not in notified_events_5min:
+                    try:
+                        play_sound(config["device_ip"], preset_id=5, volume=70)
+                    except Exception:
+                        logger.exception("Failed to play sound")
+                    notified_events_5min.add(event_key)
+                    time.sleep(1)
 
                 if current_display != ("notify", event_key):
                     send_bitmap(config["device_ip"], text, COLOR_GREEN, config)
@@ -246,9 +257,14 @@ def main():
                     current_display = None
 
             # Clean up old notified events
-            notified_events = {
-                key for key in notified_events
-                if key[0] + timedelta(minutes=DISPLAY_AFTER_START_MINUTES) > now
+            cutoff = now - timedelta(minutes=DISPLAY_AFTER_START_MINUTES)
+            notified_events_10min = {
+                key for key in notified_events_10min
+                if key[0] > cutoff
+            }
+            notified_events_5min = {
+                key for key in notified_events_5min
+                if key[0] > cutoff
             }
 
         except Exception:
