@@ -28,8 +28,8 @@ def render_text_to_image(text, font_path=None, font_size=11):
     img = Image.new("1", (width, DISPLAY_HEIGHT), color=0)
     draw = ImageDraw.Draw(img)
 
-    # 垂直方向に中央揃え
-    y_offset = max(0, (DISPLAY_HEIGHT - text_height) // 2) - bbox[1]
+    # 垂直方向に中央揃え（端数は下寄せで最下行も活用）
+    y_offset = max(0, -(-( DISPLAY_HEIGHT - text_height) // 2)) - bbox[1]
     draw.text((1, y_offset), text, fill=1, font=font)
 
     return img
