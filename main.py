@@ -15,9 +15,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Display timing constants
+NOTIFY_BEFORE_MINUTES = 10  # Show notification before event start
+DISPLAY_AFTER_START_MINUTES = 5  # Keep showing after event starts
+
+# Colors
+COLOR_GREEN = {"r": 0, "g": 255, "b": 0}
+COLOR_RED = {"r": 255, "g": 0, "b": 0}
+
 
 def fetch_events(ical_url):
-    """iCal URLからイベントを取得し、今日と明日のイベントを返す"""
+    """Fetch events from an iCal URL for today and tomorrow."""
     resp = requests.get(ical_url, timeout=30)
     resp.raise_for_status()
     cal = Calendar.from_ical(resp.text)
@@ -32,7 +40,6 @@ def fetch_events(ical_url):
             continue
         dt = dtstart.dt
 
-        # 終日イベントはdateオブジェクト、時刻付きはdatetimeオブジェクト
         if isinstance(dt, datetime):
             event_date = dt.replace(tzinfo=None)
         else:
@@ -40,74 +47,45 @@ def fetch_events(ical_url):
 
         if now.date() <= event_date.date() <= tomorrow_end.date():
             summary = str(component.get("summary", ""))
-            events.append({"start": event_date, "summary": summary})
+            # Parse end time
+            dtend = component.get("dtend")
+            end_date = None
+            if dtend:
+                end_dt = dtend.dt
+                if isinstance(end_dt, datetime):
+                    end_date = end_dt.replace(tzinfo=None)
+                else:
+                    end_date = datetime.combine(end_dt, datetime.min.time())
+
+            events.append({
+                "start": event_date,
+                "end": end_date,
+                "summary": summary,
+            })
 
     return sorted(events, key=lambda e: e["start"])
 
 
 def fetch_all_events(ical_urls):
-    """複数のiCal URLからイベントを取得して統合する"""
+    """Fetch and merge events from multiple iCal URLs."""
     all_events = []
     for url in ical_urls:
         try:
             events = fetch_events(url)
             all_events.extend(events)
-            logger.info("%d件のイベントを取得: %s", len(events), url[:50])
+            logger.info("Fetched %d events: %s", len(events), url[:50])
         except Exception:
-            logger.exception("カレンダー取得エラー: %s", url[:50])
+            logger.exception("Failed to fetch calendar: %s", url[:50])
     return sorted(all_events, key=lambda e: e["start"])
 
 
-def format_events_text(events):
-    """イベントリストを表示用テキストに変換する"""
-    if not events:
-        return "予定なし"
-
-    now = datetime.now()
-    lines = []
-    for event in events:
-        dt = event["start"]
-        if dt.date() == now.date():
-            time_str = dt.strftime("%H:%M")
-        else:
-            time_str = "明日 " + dt.strftime("%H:%M")
-
-        # 終日イベント（00:00）は時刻を省略
-        if dt.hour == 0 and dt.minute == 0:
-            if dt.date() == now.date():
-                time_str = "終日"
-            else:
-                time_str = "明日"
-
-        lines.append(f"{time_str} {event['summary']}")
-
-    return " | ".join(lines)
-
-
-def send_to_display(device_ip, text, config):
-    """ビットマップモードでテキストをLEDに送信する"""
-    payload = render_text_to_bitmap_payload(
-        text,
-        color={"r": 0, "g": 255, "b": 128},
-        scroll_speed=config["scroll_speed"],
-        font_path=config.get("font_path"),
-        font_size=config.get("font_size", 11),
-    )
-    url = f"http://{device_ip}/api/bitmap"
-    resp = requests.post(url, json=payload, timeout=10)
-    resp.raise_for_status()
-    logger.info("ビットマップ表示更新: %s", text[:50])
-
-
 def fetch_all_calendar_events(config):
-    """全ソース（iCal URL + iCloud CalDAV）からイベントを取得して統合する"""
+    """Fetch events from all sources (iCal URLs + iCloud CalDAV)."""
     all_events = []
 
-    # iCal URL方式（Google カレンダー等）
     if config["ical_urls"]:
         all_events.extend(fetch_all_events(config["ical_urls"]))
 
-    # iCloud CalDAV方式（Apple カレンダー）
     if config["icloud_username"] and config["icloud_app_password"]:
         try:
             icloud_events = fetch_icloud_events(
@@ -115,11 +93,72 @@ def fetch_all_calendar_events(config):
                 config["icloud_app_password"],
             )
             all_events.extend(icloud_events)
-            logger.info("iCloud: %d件のイベントを取得", len(icloud_events))
+            logger.info("iCloud: fetched %d events", len(icloud_events))
         except Exception:
-            logger.exception("iCloudカレンダー取得エラー")
+            logger.exception("Failed to fetch iCloud calendar")
 
     return sorted(all_events, key=lambda e: e["start"])
+
+
+def format_event_text(event):
+    """Format a single event for LED display (e.g. '09:00-10:00 ABC')."""
+    start_str = event["start"].strftime("%H:%M")
+    if event.get("end"):
+        end_str = event["end"].strftime("%H:%M")
+        return f"{start_str}-{end_str} {event['summary']}"
+    return f"{start_str} {event['summary']}"
+
+
+def get_event_phase(event, now):
+    """Determine the display phase for an event.
+
+    Returns:
+        "notify"  — 10 min before start until start (green + sound)
+        "active"  — start until 5 min after start (red)
+        "off"     — outside display window
+    """
+    start = event["start"]
+    notify_time = start - timedelta(minutes=NOTIFY_BEFORE_MINUTES)
+    display_end = start + timedelta(minutes=DISPLAY_AFTER_START_MINUTES)
+
+    if notify_time <= now < start:
+        return "notify"
+    elif start <= now < display_end:
+        return "active"
+    else:
+        return "off"
+
+
+def send_bitmap(device_ip, text, color, config):
+    """Send bitmap text to LED display."""
+    payload = render_text_to_bitmap_payload(
+        text,
+        color=color,
+        scroll_speed=config["scroll_speed"],
+        font_path=config.get("font_path"),
+        font_size=config.get("font_size", 12),
+    )
+    url = f"http://{device_ip}/api/bitmap"
+    resp = requests.post(url, json=payload, timeout=10)
+    resp.raise_for_status()
+    logger.info("Display updated: %s", text[:50])
+
+
+def clear_display(device_ip):
+    """Clear bitmap display."""
+    url = f"http://{device_ip}/api/bitmap"
+    resp = requests.delete(url, timeout=10)
+    resp.raise_for_status()
+    logger.info("Display cleared")
+
+
+def play_sound(device_ip, preset_id=1, volume=75):
+    """Play a notification sound on the device."""
+    url = f"http://{device_ip}/api/sound/preview"
+    payload = {"preset_id": preset_id, "volume": volume}
+    resp = requests.post(url, json=payload, timeout=10)
+    resp.raise_for_status()
+    logger.info("Sound played: preset=%d, volume=%d", preset_id, volume)
 
 
 def main():
@@ -129,26 +168,93 @@ def main():
     has_icloud = bool(config["icloud_username"] and config["icloud_app_password"])
 
     if not has_ical and not has_icloud:
-        logger.error("カレンダーが設定されていません。.envファイルを確認してください。")
+        logger.error("No calendar configured. Check your .env file.")
         return
 
     sources = []
     if has_ical:
-        sources.append(f"iCal URL {len(config['ical_urls'])}件")
+        sources.append(f"iCal URL x{len(config['ical_urls'])}")
     if has_icloud:
         sources.append("iCloud CalDAV")
-    logger.info("開始 - デバイス: %s, ソース: %s", config["device_ip"], ", ".join(sources))
-    logger.info("取得間隔: %d秒", config["fetch_interval"])
+    logger.info("Starting - device: %s, sources: %s", config["device_ip"], ", ".join(sources))
+    logger.info("Fetch interval: %ds", config["fetch_interval"])
+
+    events = []
+    last_fetch = None
+    notified_events = set()  # Track events where sound has been played
+    current_display = None  # Track what's currently displayed
 
     while True:
         try:
-            events = fetch_all_calendar_events(config)
-            text = format_events_text(events)
-            send_to_display(config["device_ip"], text, config)
-        except Exception:
-            logger.exception("メインループでエラーが発生")
+            now = datetime.now()
 
-        time.sleep(config["fetch_interval"])
+            # Fetch events periodically
+            if last_fetch is None or (now - last_fetch).total_seconds() >= config["fetch_interval"]:
+                events = fetch_all_calendar_events(config)
+                last_fetch = now
+                logger.info("Fetched %d events total", len(events))
+
+            # Find the highest priority event to display
+            display_event = None
+            display_phase = None
+
+            for event in events:
+                phase = get_event_phase(event, now)
+                if phase == "active":
+                    # Active events take highest priority
+                    display_event = event
+                    display_phase = phase
+                    break
+                elif phase == "notify" and display_phase != "active":
+                    # Notify phase, but only if no active event
+                    display_event = event
+                    display_phase = phase
+
+            # Update display based on current state
+            if display_event and display_phase == "notify":
+                event_key = (display_event["start"], display_event["summary"])
+                text = format_event_text(display_event)
+
+                # Play sound once per event
+                if event_key not in notified_events:
+                    try:
+                        play_sound(config["device_ip"])
+                    except Exception:
+                        logger.exception("Failed to play sound")
+                    notified_events.add(event_key)
+                    time.sleep(1)  # Wait before sending bitmap
+
+                if current_display != ("notify", event_key):
+                    send_bitmap(config["device_ip"], text, COLOR_GREEN, config)
+                    current_display = ("notify", event_key)
+
+            elif display_event and display_phase == "active":
+                event_key = (display_event["start"], display_event["summary"])
+                text = format_event_text(display_event)
+
+                if current_display != ("active", event_key):
+                    send_bitmap(config["device_ip"], text, COLOR_RED, config)
+                    current_display = ("active", event_key)
+
+            else:
+                # No event to display — clear if something was showing
+                if current_display is not None:
+                    try:
+                        clear_display(config["device_ip"])
+                    except Exception:
+                        logger.exception("Failed to clear display")
+                    current_display = None
+
+            # Clean up old notified events
+            notified_events = {
+                key for key in notified_events
+                if key[0] + timedelta(minutes=DISPLAY_AFTER_START_MINUTES) > now
+            }
+
+        except Exception:
+            logger.exception("Error in main loop")
+
+        time.sleep(10)  # Check every 10 seconds
 
 
 if __name__ == "__main__":

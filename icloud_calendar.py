@@ -9,9 +9,9 @@ ICLOUD_CALDAV_URL = "https://caldav.icloud.com/"
 
 
 def fetch_icloud_events(username, app_password):
-    """iCloud CalDAVからプライベートカレンダーのイベントを取得する
+    """Fetch private calendar events from iCloud via CalDAV.
 
-    今日と明日のイベントを全カレンダーから取得して返す。
+    Returns today's and tomorrow's events from all calendars.
     """
     client = caldav.DAVClient(
         url=ICLOUD_CALDAV_URL,
@@ -33,15 +33,15 @@ def fetch_icloud_events(username, app_password):
                 parsed = _parse_caldav_event(event)
                 if parsed:
                     all_events.append(parsed)
-            logger.info("%d件のイベントを取得: iCloud/%s", len(cal_events), cal.name)
+            logger.info("Fetched %d events: iCloud/%s", len(cal_events), cal.name)
         except Exception:
-            logger.exception("iCloudカレンダー取得エラー: %s", cal.name)
+            logger.exception("Failed to fetch iCloud calendar: %s", cal.name)
 
     return sorted(all_events, key=lambda e: e["start"])
 
 
 def _parse_caldav_event(event):
-    """CalDAVイベントオブジェクトをパースする"""
+    """Parse a CalDAV event object into a dict."""
     try:
         vevent = event.vobject_instance.vevent
         summary = str(vevent.summary.value) if hasattr(vevent, "summary") else ""
@@ -54,10 +54,19 @@ def _parse_caldav_event(event):
         else:
             return None
 
+        # Parse end time
+        end_date = None
+        if hasattr(vevent, "dtend"):
+            dtend = vevent.dtend.value
+            if isinstance(dtend, datetime):
+                end_date = dtend.replace(tzinfo=None)
+            elif isinstance(dtend, date):
+                end_date = datetime.combine(dtend, datetime.min.time())
+
         now = datetime.now()
         tomorrow_end = (now + timedelta(days=1)).replace(hour=23, minute=59, second=59)
         if now.date() <= event_date.date() <= tomorrow_end.date():
-            return {"start": event_date, "summary": summary}
+            return {"start": event_date, "end": end_date, "summary": summary}
     except Exception:
-        logger.exception("イベントのパースに失敗")
+        logger.exception("Failed to parse event")
     return None
