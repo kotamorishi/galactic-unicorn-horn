@@ -129,6 +129,45 @@ ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 | `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus12-Regular.ttf` |
 | `FONT_SIZE` | フォントサイズ（px） | `12` |
 
+## サービスとして実行（Raspberry Pi）
+
+バックグラウンドサービスとして登録すると、起動時に自動実行されます：
+
+```bash
+# サービスファイルをコピー
+sudo cp galactic-unicorn-horn.service /etc/systemd/system/
+
+# インストール先やユーザーが /home/pi/ と異なる場合は編集
+sudo nano /etc/systemd/system/galactic-unicorn-horn.service
+
+# 有効化して起動
+sudo systemctl daemon-reload
+sudo systemctl enable galactic-unicorn-horn
+sudo systemctl start galactic-unicorn-horn
+```
+
+よく使うコマンド：
+
+```bash
+# ステータス確認
+sudo systemctl status galactic-unicorn-horn
+
+# ログを表示
+journalctl -u galactic-unicorn-horn -f
+
+# 設定変更後に再起動
+sudo systemctl restart galactic-unicorn-horn
+
+# 停止
+sudo systemctl stop galactic-unicorn-horn
+```
+
+主な特徴：
+- 起動時に**自動スタート**（`enable`）
+- クラッシュ時に**自動再起動**（10秒後にリスタート）
+- **ログ**はjournaldで管理（ログファイルのローテーション不要）
+- **ネットワーク接続後**に起動
+
 ## セキュリティについて
 
 - `.env` ファイルは `.gitignore` に含まれており、Gitにコミットされません

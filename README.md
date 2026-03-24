@@ -129,6 +129,45 @@ Events are displayed based on their start time. For example, a `09:00-10:00 ABC`
 | `FONT_PATH` | Path to font file | `fonts/PixelMplus12-Regular.ttf` |
 | `FONT_SIZE` | Font size in pixels | `12` |
 
+## Running as a Service (Raspberry Pi)
+
+To run as a background service that starts automatically on boot:
+
+```bash
+# Copy the service file
+sudo cp galactic-unicorn-horn.service /etc/systemd/system/
+
+# Edit the service file if your install path or user differs from /home/pi/
+sudo nano /etc/systemd/system/galactic-unicorn-horn.service
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable galactic-unicorn-horn
+sudo systemctl start galactic-unicorn-horn
+```
+
+Useful commands:
+
+```bash
+# Check status
+sudo systemctl status galactic-unicorn-horn
+
+# View logs
+journalctl -u galactic-unicorn-horn -f
+
+# Restart after config changes
+sudo systemctl restart galactic-unicorn-horn
+
+# Stop
+sudo systemctl stop galactic-unicorn-horn
+```
+
+Key features:
+- **Auto-start** on boot (`enable`)
+- **Auto-restart** on crash (restarts after 10 seconds)
+- **Logs** managed by journald (no log files to rotate)
+- **Waits for network** before starting
+
 ## Security
 
 - `.env` is included in `.gitignore` and will not be committed to Git
