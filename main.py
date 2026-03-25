@@ -20,6 +20,7 @@ NOTIFY_BEFORE_MINUTES = 10  # Show notification before event start
 DISPLAY_AFTER_START_MINUTES = 5  # Keep showing after event starts
 
 # Colors
+COLOR_WHITE = {"r": 255, "g": 255, "b": 255}
 COLOR_GREEN = {"r": 0, "g": 255, "b": 0}
 COLOR_RED = {"r": 255, "g": 0, "b": 0}
 
@@ -143,14 +144,15 @@ def check_device(device_ip):
         return False
 
 
-def send_bitmap(device_ip, text, color, config):
-    """Send bitmap text to LED display."""
+def send_bitmap(device_ip, text, indicator_color, config):
+    """Send bitmap text to LED display with 1px color indicator line."""
     payload = render_text_to_bitmap_payload(
         text,
-        color=color,
+        color=COLOR_WHITE,
+        bar_color=indicator_color,
         scroll_speed=config["scroll_speed"],
         font_path=config.get("font_path"),
-        font_size=config.get("font_size", 12),
+        font_size=config.get("font_size", 10),
     )
     url = f"http://{device_ip}/api/bitmap"
     resp = requests.post(url, json=payload, timeout=10)

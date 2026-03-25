@@ -3,11 +3,11 @@ import math
 
 from PIL import Image, ImageDraw, ImageFont
 
-# Galactic Unicorn Legのディスプレイ高さ
+# Galactic Unicorn Leg display height
 DISPLAY_HEIGHT = 11
-# monoフォーマットの最大幅
+# Max width for mono format
 MAX_MONO_WIDTH = 5000
-# Default font: PixelMplus10-Regular at 10px, centered in 11px display
+# Default font: PixelMplus10-Regular at 10px
 DEFAULT_FONT_PATH = "fonts/PixelMplus10-Regular.ttf"
 DEFAULT_FONT_SIZE = 10
 
@@ -41,7 +41,7 @@ def render_text_to_image(text, font_path=None, font_size=None):
 
 
 def image_to_mono_bytes(img):
-    """PIL Imageをmonoフォーマット（1bit/pixel, MSB first, 行ごとにバイト境界パディング）に変換"""
+    """Convert PIL Image to mono format (1bit/pixel, MSB first, row-padded)."""
     width, height = img.size
     pixels = img.load()
     data = bytearray()
@@ -59,18 +59,28 @@ def image_to_mono_bytes(img):
     return bytes(data)
 
 
-def render_text_to_bitmap_payload(text, color=None, scroll_speed="medium", font_path=None, font_size=None):
-    """テキストからビットマップAPI用のペイロードを生成する"""
+def render_text_to_bitmap_payload(text, color=None, bar_color=None,
+                                  scroll_speed="medium", font_path=None, font_size=None):
+    """Generate bitmap API payload from text.
+
+    Uses mono format with optional bar_color for 1px indicator line at top.
+    """
+    color = color or {"r": 255, "g": 255, "b": 255}
     img = render_text_to_image(text, font_path=font_path, font_size=font_size)
     mono_data = image_to_mono_bytes(img)
-    width, height = img.size
+    width = img.size[0]
 
-    return {
+    payload = {
         "width": width,
-        "height": height,
+        "height": DISPLAY_HEIGHT,
         "format": "mono",
-        "color": color or {"r": 0, "g": 255, "b": 128},
+        "color": color,
         "display_mode": "scroll",
         "scroll_speed": scroll_speed,
         "data": base64.b64encode(mono_data).decode("ascii"),
     }
+
+    if bar_color:
+        payload["bar_color"] = bar_color
+
+    return payload

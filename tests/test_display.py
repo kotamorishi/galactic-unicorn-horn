@@ -1,11 +1,11 @@
 from unittest import mock
 
-from main import send_bitmap, clear_display, play_sound, COLOR_GREEN, COLOR_RED
+from main import send_bitmap, clear_display, play_sound, COLOR_GREEN, COLOR_RED, COLOR_WHITE
 
 
 class TestSendBitmap:
     def test_calls_bitmap_api(self):
-        config = {"scroll_speed": "medium", "font_path": None, "font_size": 12}
+        config = {"scroll_speed": "medium", "font_path": None, "font_size": 10}
         with mock.patch("main.requests.post") as mock_post:
             mock_post.return_value.raise_for_status = mock.Mock()
             send_bitmap("192.168.1.100", "Test", COLOR_GREEN, config)
@@ -13,8 +13,9 @@ class TestSendBitmap:
         mock_post.assert_called_once()
         assert mock_post.call_args[0][0] == "http://192.168.1.100/api/bitmap"
 
-    def test_payload_has_bitmap_fields(self):
-        config = {"scroll_speed": "medium", "font_path": None, "font_size": 12}
+    def test_payload_has_bar_color(self):
+        """Payload should include bar_color for indicator line."""
+        config = {"scroll_speed": "medium", "font_path": None, "font_size": 10}
         with mock.patch("main.requests.post") as mock_post:
             mock_post.return_value.raise_for_status = mock.Mock()
             send_bitmap("192.168.1.100", "Hello", COLOR_RED, config)
@@ -22,12 +23,11 @@ class TestSendBitmap:
         payload = mock_post.call_args[1]["json"]
         assert payload["format"] == "mono"
         assert payload["height"] == 11
-        assert "width" in payload
-        assert "data" in payload
-        assert payload["color"] == COLOR_RED
+        assert payload["bar_color"] == COLOR_RED
+        assert payload["color"] == COLOR_WHITE
 
     def test_custom_scroll_speed(self):
-        config = {"scroll_speed": "fast", "font_path": None, "font_size": 12}
+        config = {"scroll_speed": "fast", "font_path": None, "font_size": 10}
         with mock.patch("main.requests.post") as mock_post:
             mock_post.return_value.raise_for_status = mock.Mock()
             send_bitmap("10.0.0.1", "Test", COLOR_GREEN, config)
@@ -36,7 +36,7 @@ class TestSendBitmap:
         assert payload["scroll_speed"] == "fast"
 
     def test_device_ip_in_url(self):
-        config = {"scroll_speed": "medium", "font_path": None, "font_size": 12}
+        config = {"scroll_speed": "medium", "font_path": None, "font_size": 10}
         with mock.patch("main.requests.post") as mock_post:
             mock_post.return_value.raise_for_status = mock.Mock()
             send_bitmap("10.0.0.50", "Test", COLOR_GREEN, config)
