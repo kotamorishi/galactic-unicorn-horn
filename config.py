@@ -20,5 +20,5 @@ def get_config():
         "fetch_interval": int(os.getenv("FETCH_INTERVAL", "300")),
         "scroll_speed": os.getenv("SCROLL_SPEED", "medium"),
         "font_path": font_path if font_path else None,
-        "font_size": int(os.getenv("FONT_SIZE", "12")),
+        "font_size": int(os.getenv("FONT_SIZE", "10")),
     }

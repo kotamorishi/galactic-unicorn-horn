@@ -7,16 +7,13 @@ from PIL import Image, ImageDraw, ImageFont
 DISPLAY_HEIGHT = 11
 # monoフォーマットの最大幅
 MAX_MONO_WIDTH = 5000
-# デフォルトフォント設定（PixelMplus12-Regular, 12px描画→11pxクロップ）
-DEFAULT_FONT_PATH = "fonts/PixelMplus12-Regular.ttf"
-DEFAULT_FONT_SIZE = 12
+# Default font: PixelMplus10-Regular at 10px, centered in 11px display
+DEFAULT_FONT_PATH = "fonts/PixelMplus10-Regular.ttf"
+DEFAULT_FONT_SIZE = 10
 
 
 def render_text_to_image(text, font_path=None, font_size=None):
-    """テキストを11px高の画像にレンダリングする
-
-    12pxピクセルフォントで描画し、上1pxをクロップして11pxに収める。
-    """
+    """Render text to an 11px-high 1-bit image."""
     font_path = font_path or DEFAULT_FONT_PATH
     font_size = font_size or DEFAULT_FONT_SIZE
 
@@ -25,23 +22,20 @@ def render_text_to_image(text, font_path=None, font_size=None):
     except OSError:
         font = ImageFont.load_default(size=font_size)
 
-    # テキスト幅を計測
+    # Measure text dimensions
     dummy = Image.new("1", (1, 1))
     draw = ImageDraw.Draw(dummy)
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
 
-    # 12px高で描画してから上1pxクロップで11pxにする
-    render_height = font_size
     width = min(max(text_width + 2, 1), MAX_MONO_WIDTH)
-    img = Image.new("1", (width, render_height), color=0)
+    img = Image.new("1", (width, DISPLAY_HEIGHT), color=0)
     draw = ImageDraw.Draw(img)
-    draw.text((1, -bbox[1]), text, fill=1, font=font)
 
-    # 上1pxカットして11pxに
-    crop_top = render_height - DISPLAY_HEIGHT
-    if crop_top > 0:
-        img = img.crop((0, crop_top, width, render_height))
+    # Vertically center the text
+    y_offset = max(0, (DISPLAY_HEIGHT - text_height) // 2) - bbox[1]
+    draw.text((1, y_offset), text, fill=1, font=font)
 
     return img
 

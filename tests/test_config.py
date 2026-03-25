@@ -14,7 +14,7 @@ class TestGetConfig:
         assert config["fetch_interval"] == 300
         assert config["scroll_speed"] == "medium"
         assert config["font_path"] is None
-        assert config["font_size"] == 12
+        assert config["font_size"] == 10
         assert config["icloud_username"] is None
         assert config["icloud_app_password"] is None
 
