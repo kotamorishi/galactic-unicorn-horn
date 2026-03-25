@@ -192,7 +192,8 @@ def main():
         sources.append(f"iCal URL x{len(config['ical_urls'])}")
     if has_icloud:
         sources.append("iCloud CalDAV")
-    logger.info("Starting - device: %s, sources: %s", config["device_ip"], ", ".join(sources))
+    device_ips = config["device_ips"]
+    logger.info("Starting - devices: %s, sources: %s", ", ".join(device_ips), ", ".join(sources))
     logger.info("Fetch interval: %ds", config["fetch_interval"])
 
     events = []
@@ -201,7 +202,7 @@ def main():
     notified_events_5min = set()  # Track events where 5-min sound has been played
     current_display = None  # Track what's currently displayed
 
-    device_available = False
+    available_devices = set()
 
     while True:
         try:
@@ -213,9 +214,9 @@ def main():
                 last_fetch = now
                 logger.info("Fetched %d events total", len(events))
                 # Check device connectivity at each fetch cycle
-                device_available = check_device(config["device_ip"])
+                available_devices = {ip for ip in device_ips if check_device(ip)}
 
-            if not device_available:
+            if not available_devices:
                 time.sleep(10)
                 continue
 
@@ -242,25 +243,28 @@ def main():
 
                 # Play sound at 10 min before
                 if event_key not in notified_events_10min:
-                    try:
-                        play_sound(config["device_ip"], preset_id=5, volume=70)
-                    except Exception:
-                        logger.exception("Failed to play sound")
+                    for ip in available_devices:
+                        try:
+                            play_sound(ip, preset_id=5, volume=70)
+                        except Exception:
+                            logger.exception("Failed to play sound on %s", ip)
                     notified_events_10min.add(event_key)
                     time.sleep(1)  # Wait before sending bitmap
 
                 # Play sound again at 5 min before
                 five_min_before = display_event["start"] - timedelta(minutes=5)
                 if now >= five_min_before and event_key not in notified_events_5min:
-                    try:
-                        play_sound(config["device_ip"], preset_id=5, volume=70)
-                    except Exception:
-                        logger.exception("Failed to play sound")
+                    for ip in available_devices:
+                        try:
+                            play_sound(ip, preset_id=5, volume=70)
+                        except Exception:
+                            logger.exception("Failed to play sound on %s", ip)
                     notified_events_5min.add(event_key)
                     time.sleep(1)
 
                 if current_display != ("notify", event_key):
-                    send_bitmap(config["device_ip"], text, COLOR_GREEN, config)
+                    for ip in available_devices:
+                        send_bitmap(ip, text, COLOR_GREEN, config)
                     current_display = ("notify", event_key)
 
             elif display_event and display_phase == "active":
@@ -268,16 +272,18 @@ def main():
                 text = format_event_text(display_event)
 
                 if current_display != ("active", event_key):
-                    send_bitmap(config["device_ip"], text, COLOR_RED, config)
+                    for ip in available_devices:
+                        send_bitmap(ip, text, COLOR_RED, config)
                     current_display = ("active", event_key)
 
             else:
                 # No event to display — clear if something was showing
                 if current_display is not None:
-                    try:
-                        clear_display(config["device_ip"])
-                    except Exception:
-                        logger.exception("Failed to clear display")
+                    for ip in available_devices:
+                        try:
+                            clear_display(ip)
+                        except Exception:
+                            logger.exception("Failed to clear display on %s", ip)
                     current_display = None
 
             # Clean up old notified events
