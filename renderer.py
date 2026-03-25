@@ -33,8 +33,8 @@ def render_text_to_image(text, font_path=None, font_size=None):
     img = Image.new("1", (width, DISPLAY_HEIGHT), color=0)
     draw = ImageDraw.Draw(img)
 
-    # Vertically center the text
-    y_offset = max(0, (DISPLAY_HEIGHT - text_height) // 2) - bbox[1]
+    # Center text in rows 1-10 (row 0 reserved for bar_color indicator)
+    y_offset = max(0, (DISPLAY_HEIGHT - 1 - text_height) // 2) + 1 - bbox[1]
     draw.text((1, y_offset), text, fill=1, font=font)
 
     return img
