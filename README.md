@@ -19,15 +19,16 @@ pip install -r requirements.txt
 
 ### 2. Install Fonts
 
-Download [PixelMplus12](https://github.com/itouhiro/PixelMplus) and place it in the `fonts/` directory.
+Download [PixelMplus](https://github.com/itouhiro/PixelMplus) and place it in the `fonts/` directory.
 
 ```
 fonts/
-  PixelMplus12-Regular.ttf
-  PixelMplus12-Bold.ttf   (optional)
+  PixelMplus10-Regular.ttf
+  PixelMplus12-Regular.ttf (optional)
+  PixelMplus12-Bold.ttf    (optional)
 ```
 
-> PixelMplus12 is a free font. It is not included in this repository due to licensing.
+> PixelMplus is a free font. It is not included in this repository due to licensing.
 
 ### 3. Configure Environment Variables
 
@@ -110,24 +111,26 @@ Events are displayed based on their start time. For example, a `09:00-10:00 ABC`
 | 09:00 | Color changes to red (event started) | Red |
 | 09:05 | Display cleared | — |
 
-- **10 min before start**: Display turns on (green) + notification sound
-- **At start time**: Color changes to red
+- **10 min before start**: Display turns on (green bar + white text) + notification sound
+- **5 min before start**: Second notification sound
+- **At start time**: Bar color changes to red
 - **5 min after start**: Display is cleared
 - Active events (red) take priority over upcoming events (green) if overlapping
-- Sound plays only once per event
+- A 1px colored indicator bar is shown at the top of the display
 
 ## Configuration Reference
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DEVICE_IP` | IP address of Galactic Unicorn Leg | `192.168.1.100` |
+| `DEVICE_IPS` | Device IPs, comma-separated for multiple | — |
+| `DEVICE_IP` | Single device IP (fallback if `DEVICE_IPS` not set) | `192.168.1.100` |
 | `ICLOUD_USERNAME` | Apple ID (email address) | — |
 | `ICLOUD_APP_PASSWORD` | iCloud app-specific password | — |
 | `ICAL_URLS` | iCal URLs (comma-separated for multiple) | — |
 | `FETCH_INTERVAL` | Calendar fetch interval in seconds | `300` |
 | `SCROLL_SPEED` | Scroll speed (`slow` / `medium` / `fast`) | `medium` |
-| `FONT_PATH` | Path to font file | `fonts/PixelMplus12-Regular.ttf` |
-| `FONT_SIZE` | Font size in pixels | `12` |
+| `FONT_PATH` | Path to font file | `fonts/PixelMplus10-Regular.ttf` |
+| `FONT_SIZE` | Font size in pixels | `10` |
 
 ## Running as a Service (Raspberry Pi)
 

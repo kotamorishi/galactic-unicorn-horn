@@ -19,15 +19,16 @@ pip install -r requirements.txt
 
 ### 2. フォントの配置
 
-`fonts/` ディレクトリに [PixelMplus12](https://github.com/itouhiro/PixelMplus) をダウンロードして配置してください。
+`fonts/` ディレクトリに [PixelMplus](https://github.com/itouhiro/PixelMplus) をダウンロードして配置してください。
 
 ```
 fonts/
-  PixelMplus12-Regular.ttf
-  PixelMplus12-Bold.ttf   (任意)
+  PixelMplus10-Regular.ttf
+  PixelMplus12-Regular.ttf (任意)
+  PixelMplus12-Bold.ttf    (任意)
 ```
 
-> PixelMplus12はフリーフォントです。ライセンスの都合上リポジトリには含めていません。
+> PixelMplusはフリーフォントです。ライセンスの都合上リポジトリには含めていません。
 
 ### 3. 環境変数の設定
 
@@ -110,24 +111,26 @@ ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 | 09:00 | 色が赤に変わる（イベント開始） | 赤 |
 | 09:05 | 表示クリア | — |
 
-- **開始10分前**: 表示ON（緑）+ 通知音
-- **開始時刻**: 色が赤に変更
+- **開始10分前**: 表示ON（緑バー + 白テキスト）+ 通知音
+- **開始5分前**: 2回目の通知音
+- **開始時刻**: バーの色が赤に変更
 - **開始5分後**: 表示クリア
 - 進行中のイベント（赤）は、次のイベント（緑）より優先表示されます
-- 通知音はイベントごとに1回だけ鳴ります
+- ディスプレイ上部に1pxのカラーインジケーターバーが表示されます
 
 ## 設定一覧
 
 | 環境変数 | 説明 | デフォルト |
 |---------|------|-----------|
-| `DEVICE_IP` | Galactic Unicorn LegのIPアドレス | `192.168.1.100` |
+| `DEVICE_IPS` | デバイスIPアドレス（カンマ区切りで複数可） | ー |
+| `DEVICE_IP` | 単一デバイスIP（`DEVICE_IPS` 未設定時のフォールバック） | `192.168.1.100` |
 | `ICLOUD_USERNAME` | Apple ID（メールアドレス） | ー |
 | `ICLOUD_APP_PASSWORD` | iCloudアプリ用パスワード | ー |
 | `ICAL_URLS` | iCal URL（カンマ区切りで複数可） | ー |
 | `FETCH_INTERVAL` | カレンダー取得間隔（秒） | `300` |
 | `SCROLL_SPEED` | スクロール速度（`slow` / `medium` / `fast`） | `medium` |
-| `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus12-Regular.ttf` |
-| `FONT_SIZE` | フォントサイズ（px） | `12` |
+| `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus10-Regular.ttf` |
+| `FONT_SIZE` | フォントサイズ（px） | `10` |
 
 ## サービスとして実行（Raspberry Pi）
 
