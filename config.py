@@ -18,6 +18,9 @@ def get_config():
     if not device_ips:
         device_ips = [os.getenv("DEVICE_IP", "192.168.1.100")]
 
+    ollama_url = os.getenv("OLLAMA_URL", "")
+    ollama_model = os.getenv("OLLAMA_MODEL", "")
+
     return {
         "device_ips": device_ips,
         "ical_urls": ical_urls,
@@ -27,4 +30,6 @@ def get_config():
         "scroll_speed": os.getenv("SCROLL_SPEED", "medium"),
         "font_path": font_path if font_path else None,
         "font_size": int(os.getenv("FONT_SIZE", "10")),
+        "ollama_url": ollama_url if ollama_url else None,
+        "ollama_model": ollama_model if ollama_model else None,
     }

@@ -118,6 +118,18 @@ ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 - 進行中のイベント（赤）は、次のイベント（緑）より優先表示されます
 - ディスプレイ上部に1pxのカラーインジケーターバーが表示されます
 
+## LLM連携（LLMHAT / Ollama）
+
+Raspberry Pi上で [Ollama](https://ollama.com/) が動作している場合（例：[Raspberry Pi AI HAT+ 2](https://www.raspberrypi.com/products/ai-hat-plus/) 使用時）、ローカルLLMを使ってイベントのテキストを自然な日本語に自動変換します。
+
+**変換例：**
+- 変換前: `09:00-10:00 打ち合わせ`
+- 変換後: `9時から打ち合わせです`
+
+LLMは起動時に自動検出されます。Ollamaが利用できない場合は従来通りのフォーマットで表示されます。LLMの結果はイベントごとにキャッシュされ、同じイベントに対する繰り返しの推論を避けます。
+
+OllamaのURLやモデルを指定する場合は、`.env` に `OLLAMA_URL` と `OLLAMA_MODEL` を設定してください。
+
 ## 設定一覧
 
 | 環境変数 | 説明 | デフォルト |
@@ -131,6 +143,8 @@ ICAL_URLS=https://calendar.google.com/calendar/ical/xxxxxxxx/basic.ics
 | `SCROLL_SPEED` | スクロール速度（`slow` / `medium` / `fast`） | `medium` |
 | `FONT_PATH` | フォントファイルのパス | `fonts/PixelMplus10-Regular.ttf` |
 | `FONT_SIZE` | フォントサイズ（px） | `10` |
+| `OLLAMA_URL` | Ollama APIのURL（LLM整形用） | 自動検出 `localhost:11434` |
+| `OLLAMA_MODEL` | 使用するOllamaモデル名 | 自動選択（最初のモデル） |
 
 ## サービスとして実行（Raspberry Pi）
 

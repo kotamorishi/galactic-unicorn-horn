@@ -118,6 +118,18 @@ Events are displayed based on their start time. For example, a `09:00-10:00 ABC`
 - Active events (red) take priority over upcoming events (green) if overlapping
 - A 1px colored indicator bar is shown at the top of the display
 
+## LLM Integration (LLMHAT / Ollama)
+
+If [Ollama](https://ollama.com/) is running on the Raspberry Pi (e.g. via [Raspberry Pi AI HAT+ 2](https://www.raspberrypi.com/products/ai-hat-plus/)), event text is automatically reformatted into natural language using a local LLM.
+
+**Example:**
+- Before: `09:00-10:00 打ち合わせ`
+- After: `9時から打ち合わせです`
+
+The LLM is auto-detected at startup. If Ollama is not available, the original format is used as a fallback. LLM results are cached per event to avoid repeated inference calls.
+
+To specify the Ollama URL or model, set `OLLAMA_URL` and `OLLAMA_MODEL` in `.env`.
+
 ## Configuration Reference
 
 | Variable | Description | Default |
@@ -131,6 +143,8 @@ Events are displayed based on their start time. For example, a `09:00-10:00 ABC`
 | `SCROLL_SPEED` | Scroll speed (`slow` / `medium` / `fast`) | `medium` |
 | `FONT_PATH` | Path to font file | `fonts/PixelMplus10-Regular.ttf` |
 | `FONT_SIZE` | Font size in pixels | `10` |
+| `OLLAMA_URL` | Ollama API URL for LLM formatting | Auto-detect `localhost:11434` |
+| `OLLAMA_MODEL` | Preferred Ollama model name | Auto-select first available |
 
 ## Running as a Service (Raspberry Pi)
 

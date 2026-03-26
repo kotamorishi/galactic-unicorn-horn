@@ -18,6 +18,7 @@ main.py            # Main loop (periodically fetch calendar → display on LED)
 config.py          # Load settings from .env
 renderer.py        # Text → bitmap conversion (Pillow, PixelMplus12)
 icloud_calendar.py # Apple CalDAV auth for private calendar access
+llm_helper.py      # LLMHAT/Ollama detection and natural language formatting
 .env.example       # Environment variable template
 requirements.txt   # Python package dependencies
 fonts/             # Pixel fonts (not committed, see README.md)

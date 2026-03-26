@@ -7,6 +7,7 @@ from icalendar import Calendar
 
 from config import get_config
 from icloud_calendar import fetch_icloud_events
+from llm_helper import detect_ollama, select_model, format_event_with_llm
 from renderer import render_text_to_bitmap_payload
 
 logging.basicConfig(
@@ -177,6 +178,28 @@ def play_sound(device_ip, preset_id=1, volume=75):
     logger.info("Sound played: preset=%d, volume=%d", preset_id, volume)
 
 
+def get_display_text(event, ollama_url, ollama_model, llm_cache):
+    """Get display text for an event, using LLM if available.
+
+    Uses a cache to avoid repeated LLM calls for the same event.
+    Falls back to format_event_text() if LLM is not available or fails.
+    """
+    raw_text = format_event_text(event)
+    if not ollama_url or not ollama_model:
+        return raw_text
+
+    cache_key = (event["start"], event["summary"])
+    if cache_key in llm_cache:
+        return llm_cache[cache_key]
+
+    result = format_event_with_llm(ollama_url, ollama_model, raw_text)
+    if result:
+        llm_cache[cache_key] = result
+        return result
+
+    return raw_text
+
+
 def main():
     config = get_config()
 
@@ -196,11 +219,24 @@ def main():
     logger.info("Starting - devices: %s, sources: %s", ", ".join(device_ips), ", ".join(sources))
     logger.info("Fetch interval: %ds", config["fetch_interval"])
 
+    # Detect LLMHAT / Ollama
+    ollama_url = detect_ollama(config.get("ollama_url"))
+    ollama_model = None
+    if ollama_url:
+        ollama_model = select_model(ollama_url, config.get("ollama_model"))
+        if ollama_model:
+            logger.info("LLM enabled: %s at %s", ollama_model, ollama_url)
+        else:
+            logger.warning("Ollama reachable but no models available")
+    else:
+        logger.info("LLM not available, using plain text format")
+
     events = []
     last_fetch = None
     notified_events_10min = set()  # Track events where 10-min sound has been played
     notified_events_5min = set()  # Track events where 5-min sound has been played
     current_display = None  # Track what's currently displayed
+    llm_cache = {}  # Cache LLM-formatted texts to avoid repeated calls
 
     available_devices = set()
 
@@ -239,7 +275,7 @@ def main():
             # Update display based on current state
             if display_event and display_phase == "notify":
                 event_key = (display_event["start"], display_event["summary"])
-                text = format_event_text(display_event)
+                text = get_display_text(display_event, ollama_url, ollama_model, llm_cache)
 
                 # Play sound at 10 min before
                 if event_key not in notified_events_10min:
@@ -269,7 +305,7 @@ def main():
 
             elif display_event and display_phase == "active":
                 event_key = (display_event["start"], display_event["summary"])
-                text = format_event_text(display_event)
+                text = get_display_text(display_event, ollama_url, ollama_model, llm_cache)
 
                 if current_display != ("active", event_key):
                     for ip in available_devices:
@@ -286,7 +322,7 @@ def main():
                             logger.exception("Failed to clear display on %s", ip)
                     current_display = None
 
-            # Clean up old notified events
+            # Clean up old notified events and LLM cache
             cutoff = now - timedelta(minutes=DISPLAY_AFTER_START_MINUTES)
             notified_events_10min = {
                 key for key in notified_events_10min
@@ -294,6 +330,10 @@ def main():
             }
             notified_events_5min = {
                 key for key in notified_events_5min
+                if key[0] > cutoff
+            }
+            llm_cache = {
+                key: val for key, val in llm_cache.items()
                 if key[0] > cutoff
             }
 
